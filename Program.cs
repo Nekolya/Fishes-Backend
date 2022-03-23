@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Для БД в оперативной памяти
-builder.Services.AddDbContext<BreedDb>(options => options.UseInMemoryDatabase("items"));
+//builder.Services.AddDbContext<BreedDb>(options => options.UseInMemoryDatabase("items"));
 builder.Services.AddDbContext<FishDb>(options => options.UseInMemoryDatabase("items"));
 
 // Для подключения к SQL Server
@@ -24,17 +24,29 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin();
+                    });
+});
+
+
 var app = builder.Build();
 
-app.MapGet("/breeds", async (BreedDb db) => await db.Breeds.ToListAsync());
-app.MapPost("/breeds", async (BreedDb db, Breed breed) =>
+app.MapGet("/breeds", async (FishDb db) => await db.Breeds.ToListAsync());
+app.MapPost("/breeds", async (FishDb db, Breed breed) =>
 {
     await db.Breeds.AddAsync(breed);
     await db.SaveChangesAsync();
     return Results.Created($"/breed/{breed.id}", breed);
 });
 
-app.MapPut("/breeds/{id}", async (BreedDb db, Breed update, int id) =>
+app.MapPut("/breeds/{id}", async (FishDb db, Breed update, int id) =>
 {
     var breed = await db.Breeds.FindAsync(id);
     if (breed is null) return Results.NotFound();
@@ -43,7 +55,7 @@ app.MapPut("/breeds/{id}", async (BreedDb db, Breed update, int id) =>
     return Results.NoContent();
 });
 
-app.MapDelete("/breeds/{id}", async (BreedDb db, int id) =>
+app.MapDelete("/breeds/{id}", async (FishDb db, int id) =>
 {
     var breed = await db.Breeds.FindAsync(id);
     if (breed is null)
@@ -92,6 +104,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseHttpsRedirection();
+
+app.UseCors(builder => builder.AllowAnyOrigin());
 
 app.Run();
 
